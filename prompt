@@ -1,0 +1,29 @@
+PROJECT: Sentinel AI (repo: github.com/AayushSoni05/my-aml-kyc)
+LOCAL PATH: C:\Users\Aayush\Desktop\Sentinal AI
+PHASE: 0 complete. Phase 1 starts next.
+
+DONE:
+- Python (via `py`), Git, VS Code, venv (.venv) set up
+- Repo pushed to GitHub, main branch clean, initial commit ac79300
+
+PRODUCT DEFINITION (draft v1, awaiting approval):
+AML transaction-monitoring tool for compliance analysts. Ingests transactions,
+flags suspicious activity via rules + anomaly detection, LLM explains each
+alert in plain English.
+
+DECISIONS:
+1. AML monitoring first, KYC is P1
+2. Synthetic data only, no real customer data
+3. Rules decide, LLM explains (auditable)
+4. Python + FastAPI + SQLite to start, Claude API for explanations
+
+P0: synthetic data generator, rule engine (structuring, velocity, high-risk
+country), alert storage, LLM explanation, API endpoints
+P1: anomaly model (Isolation Forest), analyst dashboard, KYC risk scoring
+P2: sanctions/PEP screening, SAR drafting, audit export, roles
+
+ROADMAP: Phase 2 foundation (wk 1), 3a rules (wk 2), 3b LLM (wk 3),
+3c anomaly + dashboard (wk 4-5), 4 launch (wk 6)
+
+NEXT STEP: approve Phase 1 spec, then Phase 2 Step 1 (folder structure + first API)
+OPEN QUESTIONS: learning vs real-company project? Claude API key needed by wk 3
