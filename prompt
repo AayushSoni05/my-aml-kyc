@@ -42,4 +42,3 @@ NEXT STEP: Start Phase 3 — build FastAPI endpoints over this database
 tables above.
 
 Remember: always run `$env:PYTHONPATH = "."` before any python script in
-this project (PowerShell resets it every new terminal session).
