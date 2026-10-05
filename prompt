@@ -1,18 +1,45 @@
 I'm continuing my project Sentinel AI (AML/KYC compliance tool).
 Repo: github.com/AayushSoni05/my-aml-kyc
-Phase 0 (environment) and Phase 1 (planning) are complete and agreed.
+Local path: C:\Users\Admin\OneDrive - 360tf\Desktop\my-aml-kyc
 
 Act as my product manager/technical guide, same as before: explain concepts
 as we go, suggest the best approach, and confirm before big decisions.
 
-Reference doc (Phase 1 summary) is attached/pasted below.
-[paste sentinel-ai-phase1-summary.md contents here, or attach the file]
+STATUS:
+- Phase 0 (environment) and Phase 1 (planning) — complete
+- Phase 2 (database) — COMPLETE. Postgres (connected via pg8000, since
+  psycopg2's .dll was blocked by Windows Application Control policy on
+  this machine). 14 tables built and proven working together with real
+  connected seed data (a company, a partner linked via company_partner,
+  a sanctions hit, KYC, and two overall scores — all verified PASSED).
 
-Let's start Phase 2: Database build.
-- Python + FastAPI + SQLModel + SQLite (Postgres later)
-- Core tables: customers, company_members, sanction_sources,
-  screening_results, overall_scores, country_risk, investigations,
-  kyc_submissions
+TECH STACK:
+- Python + FastAPI + SQLModel
+- PostgreSQL (database: sentinal_ai), driver: pg8000 (NOT psycopg2 — it's
+  blocked on this machine)
+- Claude API for screening explanations (not yet integrated)
 
-Start with Step 1: folder structure, installing SQLModel, and building the
-Customer table with a test script to prove it saves and reads correctly.
+DATABASE TABLES (all built, lowercase/underscored names):
+customer, individual_details, sole_proprietor_details, company_details,
+company_partner, kyc_document, kyc_individual, kyc_company, sanctions,
+pep, adverse_media, country_risk_reference, country_risk, overall_score
+
+KEY DESIGN DECISIONS:
+- A company's partners are themselves rows in `customer` (type=individual),
+  linked via `company_partner` — not a separate special-cased structure
+- Screening tables (sanctions, pep, adverse_media, country_risk) always
+  just use customer_id — works identically for individuals, sole
+  proprietors, companies, or partners
+- overall_score stores score VALUES directly (not FKs to specific
+  screening rows), since a customer is screened repeatedly over time
+- Matching formula: S = weighted attribute score (name, identifier, DOB,
+  country, gender...); CRI = complement-product formula across sources
+  (NOT an average) — from Phase 1 spec
+- found_via field distinguishes API-sourced vs web-search-sourced matches
+
+NEXT STEP: Start Phase 3 — build FastAPI endpoints over this database
+(POST/GET /customers, screening endpoints, etc.), reading/writing to the
+tables above.
+
+Remember: always run `$env:PYTHONPATH = "."` before any python script in
+this project (PowerShell resets it every new terminal session).
