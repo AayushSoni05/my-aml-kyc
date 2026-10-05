@@ -14,13 +14,22 @@ class CustomerStatus(str, Enum):
     Possible_Match = "Review"
     Match = "Block"
 
+class CompanyPartners(str, Enum):
+    owner = "owner"
+    controler = "controler"
+    director = "director"
+    authorized_person = "authorize person"
+    authorized_signatory = "authorized signatory"
+    shareholder = "shareholder"
+    ubo = "ubo"
+
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
 
 class Customer(SQLModel, table = True):
     __tablename__ = "customer"
-    id : Optional[int] = Field(default = None, primary_key = True)
+    id : Optional[str] = Field(primary_key = True)
     full_name : str
     customer_type : CustomerType = Field(default = CustomerType.individual)
     country : Optional[str] = None
@@ -30,8 +39,8 @@ class Customer(SQLModel, table = True):
 # Customer_Types ------->
 class IndividualDetails(SQLModel, table = True):
     __tablename__ = "individual_details"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    customer_id: int = Field(foreign_key="customer.id")
+    id: Optional[str] = Field(primary_key=True)
+    customer_id: str = Field(foreign_key="customer.id")
     date_of_birth: Optional[date] = None
     identifier: Optional[str] = None
     occupation: Optional[str] = None
@@ -39,8 +48,8 @@ class IndividualDetails(SQLModel, table = True):
 
 class SoleProprietorDetails(SQLModel, table=True):
     __tablename__ = "sole_proprietor_details"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    customer_id: int = Field(foreign_key="customer.id")
+    id: Optional[str] = Field(primary_key=True)
+    customer_id: str = Field(foreign_key="customer.id")
     owner_name: str
     date_of_birth: Optional[date] = None
     identifier: Optional[str] = None
@@ -49,19 +58,21 @@ class SoleProprietorDetails(SQLModel, table=True):
 
 class CompanyDetails(SQLModel, table=True):
     __tablename__ = "company_details"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    customer_id: int = Field(foreign_key="customer.id")
+    id: Optional[str] = Field(primary_key=True)
+    customer_id: str = Field(foreign_key = "customer.id")
     registration_number: Optional[str] = None
     incorporation_date: Optional[date] = None
     industry: Optional[str] = None
 
 class CompanyPartner(SQLModel, table=True):
     __tablename__ = "company_partner"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    company_id: int = Field(foreign_key="company_details.id")
-    partner_customer_id: int = Field(foreign_key="customer.id")
-    ownership_percent: float
-    role: Optional[str] = None
+    id: Optional[str] = Field(primary_key=True)
+    company_id: str = Field(foreign_key="company_details.id")
+    partner_name: str
+    partner_role: CompanyPartners
+    ownership_percent: Optional[float] = None
+    # partner_customer_id: int = Field(foreign_key="customer.id")
+    # role: Optional[str] = None
 
 # KYC Details ------->
 class DocumentType(str, Enum):
@@ -80,8 +91,8 @@ class VerificationStatus(str, Enum):
 
 class KYCDocument(SQLModel, table=True):
     __tablename__ = "kyc_document"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    customer_id: int = Field(foreign_key="customer.id")
+    id: Optional[str] = Field(primary_key=True)
+    customer_id: str = Field(foreign_key="customer.id")
     document_type: DocumentType
     document_number: Optional[str] = None
     issuing_country: Optional[str] = None
@@ -95,8 +106,8 @@ class KYCDocument(SQLModel, table=True):
 # KYC Types ------->
 class KYCIndividual(SQLModel, table=True):
     __tablename__ = "kyc_individual"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    customer_id: int = Field(foreign_key="customer.id")
+    id: Optional[str] = Field(primary_key=True)
+    customer_id: str = Field(foreign_key="customer.id")
     residential_address: Optional[str] = None
     proof_of_address_verified: bool = False
     source_of_funds: Optional[str] = None
@@ -106,8 +117,8 @@ class KYCIndividual(SQLModel, table=True):
 
 class KYCCompany(SQLModel, table=True):
     __tablename__ = "kyc_company"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    customer_id: int = Field(foreign_key="customer.id")
+    id: Optional[str] = Field(primary_key=True)
+    customer_id: str = Field(foreign_key="customer.id")
     registered_address: Optional[str] = None
     business_nature: Optional[str] = None
     source_of_funds: Optional[str] = None
@@ -129,7 +140,7 @@ class FoundVia(str, Enum):
 class Sanctions(SQLModel, table=True):
     __tablename__ = "sanctions"
     id: Optional[int] = Field(default=None, primary_key=True)
-    customer_id: int = Field(foreign_key="customer.id")
+    customer_id: str = Field(foreign_key="customer.id")
     source_name: str
     source_country: Optional[str] = None
     matched_name: Optional[str] = None
@@ -143,7 +154,7 @@ class Sanctions(SQLModel, table=True):
 class PEP(SQLModel, table=True):
     __tablename__ = "pep"
     id: Optional[int] = Field(default=None, primary_key=True)
-    customer_id: int = Field(foreign_key="customer.id")
+    customer_id: str = Field(foreign_key="customer.id")
     source_name: str
     source_country: Optional[str] = None
     matched_name: Optional[str] = None
@@ -157,7 +168,7 @@ class PEP(SQLModel, table=True):
 class AdverseMedia(SQLModel, table=True):
     __tablename__ = "adverse_media"
     id: Optional[int] = Field(default=None, primary_key=True)
-    customer_id: int = Field(foreign_key="customer.id")
+    customer_id: str = Field(foreign_key="customer.id")
     headline: str
     source_url: Optional[str] = None
     published_date: Optional[date] = None
@@ -185,7 +196,7 @@ class CountryRiskReference(SQLModel, table=True):
 class CountryRisk(SQLModel, table=True):
     __tablename__ = "country_risk"
     id: Optional[int] = Field(default=None, primary_key=True)
-    customer_id: int = Field(foreign_key="customer.id")
+    customer_id: str = Field(foreign_key="customer.id")
     country: str
     reference_id: int = Field(foreign_key="country_risk_reference.id")
     score_applied: int
@@ -195,7 +206,7 @@ class CountryRisk(SQLModel, table=True):
 class OverallScore(SQLModel, table=True):
     __tablename__ = "overall_score"
     id: Optional[int] = Field(default=None, primary_key=True)
-    customer_id: int = Field(foreign_key="customer.id")
+    customer_id: str = Field(foreign_key="customer.id")
     cri: float
     risk_band: RiskBand
     sanctions_score: Optional[float] = None
