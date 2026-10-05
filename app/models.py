@@ -9,6 +9,11 @@ class CustomerType(str, Enum):
     sole_proprietor = "sole_proprietor"
     company = "company"
 
+class CustomerStatus(str, Enum):
+    All_Clear = "Clear"
+    Possible_Match = "Review"
+    Match = "Block"
+
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -19,6 +24,7 @@ class Customer(SQLModel, table = True):
     full_name : str
     customer_type : CustomerType = Field(default = CustomerType.individual)
     country : Optional[str] = None
+    customer_status: Optional[str] = Field(default=CustomerStatus.All_Clear)
     Generated_on : datetime = Field(default_factory=now_utc)
 
 # Customer_Types ------->
