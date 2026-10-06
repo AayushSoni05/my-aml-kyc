@@ -3,9 +3,9 @@ from enum import Enum
 from typing import Optional
 from sqlmodel import SQLModel, Field
 
-# Customers creation ------->
+# Customers ------->
 class CustomerType(str, Enum):
-    individual  = "individual"
+    individual = "individual"
     sole_proprietor = "sole_proprietor"
     company = "company"
 
@@ -14,12 +14,12 @@ class CustomerStatus(str, Enum):
     Possible_Match = "Review"
     Match = "Block"
 
-class CompanyPartners(str, Enum):
+class CompanyPartnerRole(str, Enum):
     owner = "owner"
-    controler = "controler"
+    controller = "controller"
     director = "director"
-    authorized_person = "authorize person"
-    authorized_signatory = "authorized signatory"
+    authorized_person = "authorized_person"
+    authorized_signatory = "authorized_signatory"
     shareholder = "shareholder"
     ubo = "ubo"
 
@@ -27,17 +27,17 @@ def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class Customer(SQLModel, table = True):
+class Customer(SQLModel, table=True):
     __tablename__ = "customer"
-    id : Optional[str] = Field(primary_key = True)
-    full_name : str
-    customer_type : CustomerType = Field(default = CustomerType.individual)
-    country : Optional[str] = None
-    customer_status: Optional[str] = Field(default=CustomerStatus.All_Clear)
-    Generated_on : datetime = Field(default_factory=now_utc)
+    id: str = Field(primary_key=True)
+    full_name: str
+    customer_type: CustomerType = Field(default=CustomerType.individual)
+    country: Optional[str] = None
+    customer_status: Optional[CustomerStatus] = Field(default=CustomerStatus.All_Clear)
+    Generated_on: datetime = Field(default_factory=now_utc)
 
-# Customer_Types ------->
-class IndividualDetails(SQLModel, table = True):
+# Customer Types ------->
+class IndividualDetails(SQLModel, table=True):
     __tablename__ = "individual_details"
     id: Optional[str] = Field(primary_key=True)
     customer_id: str = Field(foreign_key="customer.id")
@@ -48,7 +48,7 @@ class IndividualDetails(SQLModel, table = True):
 
 class SoleProprietorDetails(SQLModel, table=True):
     __tablename__ = "sole_proprietor_details"
-    id: Optional[str] = Field(primary_key=True)
+    id: Optional[str] = Field(default=None, primary_key=True)
     customer_id: str = Field(foreign_key="customer.id")
     owner_name: str
     date_of_birth: Optional[date] = None
@@ -58,23 +58,25 @@ class SoleProprietorDetails(SQLModel, table=True):
 
 class CompanyDetails(SQLModel, table=True):
     __tablename__ = "company_details"
-    id: Optional[str] = Field(primary_key=True)
-    customer_id: str = Field(foreign_key = "customer.id")
+    id: Optional[str] = Field(default=None, primary_key=True)
+    customer_id: str = Field(foreign_key="customer.id")
     registration_number: Optional[str] = None
     incorporation_date: Optional[date] = None
     industry: Optional[str] = None
 
+# Partners — NOT customers, but screenable in their own right
 class CompanyPartner(SQLModel, table=True):
     __tablename__ = "company_partner"
-    id: Optional[str] = Field(primary_key=True)
+    id: Optional[str] = Field(default=None, primary_key=True)
     company_id: str = Field(foreign_key="company_details.id")
     partner_name: str
-    partner_role: CompanyPartners
+    partner_role: CompanyPartnerRole
     ownership_percent: Optional[float] = None
-    # partner_customer_id: int = Field(foreign_key="customer.id")
-    # role: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    identifier: Optional[str] = None
+    country: Optional[str] = None
 
-# KYC Details ------->
+# KYC Documents ------->
 class DocumentType(str, Enum):
     passport = "passport"
     national_id = "national_id"
@@ -91,7 +93,7 @@ class VerificationStatus(str, Enum):
 
 class KYCDocument(SQLModel, table=True):
     __tablename__ = "kyc_document"
-    id: Optional[str] = Field(primary_key=True)
+    id: Optional[str] = Field(default=None, primary_key=True)
     customer_id: str = Field(foreign_key="customer.id")
     document_type: DocumentType
     document_number: Optional[str] = None
@@ -99,14 +101,14 @@ class KYCDocument(SQLModel, table=True):
     issue_date: Optional[date] = None
     expiry_date: Optional[date] = None
     file_path: Optional[str] = None
-    extracted_data: Optional[str] = None  # JSON string
+    extracted_data: Optional[str] = None
     verification_status: VerificationStatus = Field(default=VerificationStatus.pending)
     verified_at: Optional[datetime] = None
 
 # KYC Types ------->
 class KYCIndividual(SQLModel, table=True):
     __tablename__ = "kyc_individual"
-    id: Optional[str] = Field(primary_key=True)
+    id: Optional[str] = Field(default=None, primary_key=True)
     customer_id: str = Field(foreign_key="customer.id")
     residential_address: Optional[str] = None
     proof_of_address_verified: bool = False
@@ -114,10 +116,9 @@ class KYCIndividual(SQLModel, table=True):
     employment_status: Optional[str] = None
     politically_exposed: bool = False
 
-
 class KYCCompany(SQLModel, table=True):
     __tablename__ = "kyc_company"
-    id: Optional[str] = Field(primary_key=True)
+    id: Optional[str] = Field(default=None, primary_key=True)
     customer_id: str = Field(foreign_key="customer.id")
     registered_address: Optional[str] = None
     business_nature: Optional[str] = None
@@ -131,7 +132,6 @@ class MatchStatus(str, Enum):
     possible_match = "possible_match"
     not_matched = "not_matched"
 
-
 class FoundVia(str, Enum):
     api = "api"
     web_search = "web_search"
@@ -140,7 +140,8 @@ class FoundVia(str, Enum):
 class Sanctions(SQLModel, table=True):
     __tablename__ = "sanctions"
     id: Optional[int] = Field(default=None, primary_key=True)
-    customer_id: str = Field(foreign_key="customer.id")
+    customer_id: Optional[str] = Field(default=None, foreign_key="customer.id")
+    partner_id: Optional[str] = Field(default=None, foreign_key="company_partner.id")
     source_name: str
     source_country: Optional[str] = None
     matched_name: Optional[str] = None
@@ -154,7 +155,8 @@ class Sanctions(SQLModel, table=True):
 class PEP(SQLModel, table=True):
     __tablename__ = "pep"
     id: Optional[int] = Field(default=None, primary_key=True)
-    customer_id: str = Field(foreign_key="customer.id")
+    customer_id: Optional[str] = Field(default=None, foreign_key="customer.id")
+    partner_id: Optional[str] = Field(default=None, foreign_key="company_partner.id")
     source_name: str
     source_country: Optional[str] = None
     matched_name: Optional[str] = None
@@ -168,7 +170,8 @@ class PEP(SQLModel, table=True):
 class AdverseMedia(SQLModel, table=True):
     __tablename__ = "adverse_media"
     id: Optional[int] = Field(default=None, primary_key=True)
-    customer_id: str = Field(foreign_key="customer.id")
+    customer_id: Optional[str] = Field(default=None, foreign_key="customer.id")
+    partner_id: Optional[str] = Field(default=None, foreign_key="company_partner.id")
     headline: str
     source_url: Optional[str] = None
     published_date: Optional[date] = None
@@ -196,7 +199,8 @@ class CountryRiskReference(SQLModel, table=True):
 class CountryRisk(SQLModel, table=True):
     __tablename__ = "country_risk"
     id: Optional[int] = Field(default=None, primary_key=True)
-    customer_id: str = Field(foreign_key="customer.id")
+    customer_id: Optional[str] = Field(default=None, foreign_key="customer.id")
+    partner_id: Optional[str] = Field(default=None, foreign_key="company_partner.id")
     country: str
     reference_id: int = Field(foreign_key="country_risk_reference.id")
     score_applied: int
@@ -206,12 +210,13 @@ class CountryRisk(SQLModel, table=True):
 class OverallScore(SQLModel, table=True):
     __tablename__ = "overall_score"
     id: Optional[int] = Field(default=None, primary_key=True)
-    customer_id: str = Field(foreign_key="customer.id")
+    customer_id: Optional[str] = Field(default=None, foreign_key="customer.id")
+    partner_id: Optional[str] = Field(default=None, foreign_key="company_partner.id")
     cri: float
     risk_band: RiskBand
     sanctions_score: Optional[float] = None
     pep_score: Optional[float] = None
     adverse_media_score: Optional[float] = None
     country_risk_score: Optional[float] = None
-    weights_used: Optional[str] = None  # JSON string
+    weights_used: Optional[str] = None
     calculated_at: datetime = Field(default_factory=now_utc)
