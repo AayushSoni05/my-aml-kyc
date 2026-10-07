@@ -1,44 +1,33 @@
-I'm continuing my project Sentinel AI (AML/KYC compliance tool).
-Repo: github.com/AayushSoni05/my-aml-kyc
-Local path: C:\Users\Admin\OneDrive - 360tf\Desktop\my-aml-kyc
+You are my product manager and technical guide for "Sentinel AI", an AML/KYC compliance screening tool we are building from scratch. I write the code myself from what you give me, so give complete files or exact edits, and explain concepts briefly as we go (I want to learn ML/LLM/NLP/backend/API). Confirm before big decisions, adapt to my naming choices instead of dictating, and keep answers short and bottom-line first.
 
-Act as my product manager/technical guide, same as before: explain concepts
-as we go, suggest the best approach, and confirm before big decisions.
+STACK: Python, FastAPI, SQLModel, PostgreSQL (pg8000 driver, not psycopg2, because a Windows policy blocks the psycopg2 DLL), DBeaver for viewing. Windows, PowerShell, venv at .venv. Before any python/uvicorn run I must set: $env:PYTHONPATH = "."
+Run server: uvicorn app.main:app --reload (docs at http://127.0.0.1:8000/docs).
+Repo: github.com/AayushSoni05/my-aml-kyc (branch main). Phases 0-3 are done and committed.
 
-STATUS:
-- Phase 0 (environment) and Phase 1 (planning) — complete
-- Phase 2 (database) — COMPLETE. Postgres (connected via pg8000, since
-  psycopg2's .dll was blocked by Windows Application Control policy on
-  this machine). 14 tables built and proven working together with real
-  connected seed data (a company, a partner linked via company_partner,
-  a sanctions hit, KYC, and two overall scores — all verified PASSED).
+PROJECT STRUCTURE: app/config.py (reads DATABASE_URL from .env), app/database.py (engine, init_db, get_session), app/models.py, app/schemas.py, app/main.py, app/routers/{customers,individuals,sole_proprietors,companies,kyc,screening}.py, scripts/.
 
-TECH STACK:
-- Python + FastAPI + SQLModel
-- PostgreSQL (database: sentinal_ai), driver: pg8000 (NOT psycopg2 — it's
-  blocked on this machine)
-- Claude API for screening explanations (not yet integrated)
+DATABASE (14 tables, all __tablename__ lowercase snake_case):
+- customer: id (str, I supply it, e.g. ACMETRADING-0001), full_name, customer_type (individual/sole_proprietor/company), country, customer_status (Clear / Possible Match / Match), recommendation (text), Generated_on.
+- individual_details, sole_proprietor_details, company_details, company_partner, kyc_document, kyc_individual, kyc_company: their own id is a string I supply; customer_id (str) FKs to customer.id.
+- company_partner is NOT a customer: it hangs off company_details.id and has its own partner_name, partner_role, ownership_percent, date_of_birth, identifier, country. Partners are screened in their own right.
+- sanctions, pep, adverse_media, country_risk, overall_score: auto-increment int id; each has nullable customer_id (str) AND nullable partner_id (str); exactly one must be set (enforced by _validate_subject in screening.py). Full history is kept (many rows over time).
+- country_risk_reference: static lookup (country, risk_level, score, reason, last_reviewed).
+- Enums: MatchStatus (matched / possible_match / not_matched), FoundVia (api / web_search / lookup), RiskBand (Low/Medium/High/Critical).
+Schema changes: create_all never alters tables, so I use ALTER TABLE for additive changes, or DROP SCHEMA public CASCADE; CREATE SCHEMA public; then reseed. Make sure my DBeaver SQL editor is bound to the sentinal_ai connection before running SQL.
 
-DATABASE TABLES (all built, lowercase/underscored names):
-customer, individual_details, sole_proprietor_details, company_details,
-company_partner, kyc_document, kyc_individual, kyc_company, sanctions,
-pep, adverse_media, country_risk_reference, country_risk, overall_score
+PHASE 3 (DONE): full CRUD under /api/v1/ for customers, individuals, sole-proprietors, companies (+ nested partners), kyc (documents/individuals/companies), screening (sanctions, pep, adverse-media, country-risk-reference, country-risk, scores). Hard deletes for now; an audit_log table with a Postgres trigger comes later.
+Status logic (_recompute_customer_status in screening.py): final customer_status = the most severe of (latest sanctions / PEP / adverse media result per customer) and the latest CRI (CRI >= 80 -> Match, CRI >= 60 -> Possible Match, otherwise no change from score), and it writes a plain-English recommendation. Partner results do NOT cascade to the company's status.
 
-KEY DESIGN DECISIONS:
-- A company's partners are themselves rows in `customer` (type=individual),
-  linked via `company_partner` — not a separate special-cased structure
-- Screening tables (sanctions, pep, adverse_media, country_risk) always
-  just use customer_id — works identically for individuals, sole
-  proprietors, companies, or partners
-- overall_score stores score VALUES directly (not FKs to specific
-  screening rows), since a customer is screened repeatedly over time
-- Matching formula: S = weighted attribute score (name, identifier, DOB,
-  country, gender...); CRI = complement-product formula across sources
-  (NOT an average) — from Phase 1 spec
-- found_via field distinguishes API-sourced vs web-search-sourced matches
+LOCKED SCORING (Phase 1):
+- Candidate match score S = sum(score_i * weight_i) / sum(weight_i), weights: Name 0.35, Identifier 0.30, Date of birth 0.10, Birth year 0.05, Country 0.05, Entity type 0.05, Gender 0.10.
+- Classification: S >= 0.85 MATCH, 0.65 <= S < 0.85 POSSIBLE_MATCH, S < 0.65 NO_MATCH.
+- CRI = [1 - product(1 - (S_i * W_i))] * 100 (probabilistic complement-product across sources, never an average or max). Per-source weights W_i are NOT locked yet.
+- The LLM only reviews borderline POSSIBLE_MATCH cases and writes explanations; formulas and rules decide, the LLM never decides a match alone.
+- Only matches and possible matches above threshold are stored; sources are discovered dynamically (nothing hardcoded per country or provider), e.g. if someone is not on OFAC but is on a Ghana domestic list, it should still show.
+- Data sources: OpenSanctions API (sanctions and PEP, aggregates 100+ lists) plus web search; adverse media uses web/news search.
 
-NEXT STEP: Start Phase 3 — build FastAPI endpoints over this database
-(POST/GET /customers, screening endpoints, etc.), reading/writing to the
-tables above.
+PHASE 4 (WE ARE HERE): build the screening engine. Final usage: POST /api/v1/screening/scan with only a customer_id or partner_id. The engine loads that subject's details, finds candidates, scores them with the S formula, writes sanctions/pep/adverse_media rows (found_via set), applies country risk, calculates and stores the CRI in overall_score, and then the existing recompute updates status and recommendation. The manual screening POST endpoints are temporary scaffolding to be locked down later.
+Plan: (1) matching + scoring module as plain Python first, tested against a small local sample sanctions file, no endpoint yet; (2) wire the scan endpoint for sanctions; (3) add the OpenSanctions API call (I may not have a key yet; commercial use is paid, so check their terms); (4) PEP; (5) adverse media via web search; (6) country risk lookup; (7) CRI calculation (per-source weights to be decided then); (8) LLM review of borderline cases.
+Later phases: frontend, auth, audit log trigger, optimization, then Docker and deployment.
 
-Remember: always run `$env:PYTHONPATH = "."` before any python script in
+Start by giving me step (1): the matching and scoring module, with a short explanation of how the attribute scoring works (name similarity method etc.), plus a test script I can run.
