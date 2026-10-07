@@ -12,7 +12,7 @@ class CustomerType(str, Enum):
 class CustomerStatus(str, Enum):
     All_Clear = "Clear"
     Possible_Match = "Review"
-    Match = "Block"
+    Match = "Match"
 
 class CompanyPartnerRole(str, Enum):
     owner = "owner"
@@ -34,6 +34,7 @@ class Customer(SQLModel, table=True):
     customer_type: CustomerType = Field(default=CustomerType.individual)
     country: Optional[str] = None
     customer_status: Optional[CustomerStatus] = Field(default=CustomerStatus.All_Clear)
+    recommendation: Optional[str] = None
     Generated_on: datetime = Field(default_factory=now_utc)
 
 # Customer Types ------->
