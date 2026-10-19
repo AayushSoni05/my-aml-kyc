@@ -7,11 +7,9 @@ from app.config import settings
 
 engine = create_engine(settings.database_url, echo=False)
 
-
 def init_db():
     """Creates all tables that don't exist yet, based on our models."""
     SQLModel.metadata.create_all(engine)
-
 
 def get_session():
     """Opens a database session, used by scripts and later by API endpoints."""
