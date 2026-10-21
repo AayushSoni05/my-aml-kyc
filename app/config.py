@@ -5,7 +5,10 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    database_url: str = "sqlite:///./sentinel.db"
+    database_url: str 
+    anthropic_api_key: str = ""
+    upload_dir: str = "uploads"
+    extraction_model: str = "claude-sonnet-5-5"
 
     class Config:
         env_file = ".env"

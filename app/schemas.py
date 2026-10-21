@@ -5,7 +5,6 @@ from app.models import (
     CustomerType,
     CustomerStatus,
     CompanyPartnerRole,
-    DocumentType,
     VerificationStatus,
     MatchStatus,
     FoundVia,
@@ -29,6 +28,7 @@ class Read_Customer(BaseModel):
     customer_type: CustomerType
     country: Optional[str] = None
     customer_status: Optional[CustomerStatus] = None
+    kyc_status: Optional[str] = None
     recommendation: Optional[str] = None
     Generated_on: datetime
 
@@ -141,7 +141,7 @@ class Read_CompanyPartner(BaseModel):
 class Creation_KYCDocument(BaseModel):
     id: str
     customer_id: str
-    document_type: DocumentType
+    document_type: str
     document_number: Optional[str] = None
     issuing_country: Optional[str] = None
     issue_date: Optional[date] = None
@@ -152,7 +152,7 @@ class Creation_KYCDocument(BaseModel):
     verified_at: Optional[datetime] = None
 
 class Updation_KYCDocument(BaseModel):
-    document_type: Optional[DocumentType] = None
+    document_type: Optional[str] = None
     document_number: Optional[str] = None
     issuing_country: Optional[str] = None
     issue_date: Optional[date] = None
@@ -165,7 +165,7 @@ class Updation_KYCDocument(BaseModel):
 class Read_KYCDocument(BaseModel):
     id: str
     customer_id: str
-    document_type: DocumentType
+    document_type: str
     document_number: Optional[str] = None
     issuing_country: Optional[str] = None
     issue_date: Optional[date] = None
@@ -174,9 +174,11 @@ class Read_KYCDocument(BaseModel):
     extracted_data: Optional[str] = None
     verification_status: VerificationStatus
     verified_at: Optional[datetime] = None
+    verification_checks: Optional[str] = None  
+    extraction_confidence: Optional[float] = None
+
     class Config:
         from_attributes = True
-
 
 class Creation_KYCIndividual(BaseModel):
     id: str
@@ -232,6 +234,14 @@ class Read_KYCCompany(BaseModel):
     regulatory_license_no: Optional[str] = None
     class Config:
         from_attributes = True
+
+class Read_KYCScreening(BaseModel):
+    id:int
+    customer_id: str
+    status: str
+    score: float
+    findings: list[dict]
+    screened_at: datetime
 
 # --- Sanctions ---
 class Creation_Sanctions(BaseModel):

@@ -36,6 +36,7 @@ class Customer(SQLModel, table=True):
     customer_status: Optional[CustomerStatus] = Field(default=CustomerStatus.All_Clear)
     recommendation: Optional[str] = None
     Generated_on: datetime = Field(default_factory=now_utc)
+    kyc_status: Optional[str] = Field(default="Not Started")
 
 # Customer Types ------->
 class IndividualDetails(SQLModel, table=True):
@@ -76,27 +77,19 @@ class CompanyPartner(SQLModel, table=True):
     date_of_birth: Optional[date] = None
     identifier: Optional[str] = None
     country: Optional[str] = None
-
-# KYC Documents ------->
-class DocumentType(str, Enum):
-    passport = "passport"
-    national_id = "national_id"
-    driving_license = "driving_license"
-    utility_bill = "utility_bill"
-    certificate_of_incorporation = "certificate_of_incorporation"
-    other = "other"
-
+    
 class VerificationStatus(str, Enum):
     pending = "pending"
     verified = "verified"
     rejected = "rejected"
     expired = "expired"
+    review = "review"
 
 class KYCDocument(SQLModel, table=True):
     __tablename__ = "kyc_document"
     id: Optional[str] = Field(default=None, primary_key=True)
     customer_id: str = Field(foreign_key="customer.id")
-    document_type: DocumentType
+    document_type: str            # a code from kyc_document_type
     document_number: Optional[str] = None
     issuing_country: Optional[str] = None
     issue_date: Optional[date] = None
@@ -105,6 +98,8 @@ class KYCDocument(SQLModel, table=True):
     extracted_data: Optional[str] = None
     verification_status: VerificationStatus = Field(default=VerificationStatus.pending)
     verified_at: Optional[datetime] = None
+    verification_checks: Optional[str] = None   # JSON: checks that ran and their results
+    extraction_confidence: Optional[float] = None
 
 # KYC Types ------->
 class KYCIndividual(SQLModel, table=True):
@@ -126,6 +121,42 @@ class KYCCompany(SQLModel, table=True):
     source_of_funds: Optional[str] = None
     ultimate_beneficial_owner_identified: bool = False
     regulatory_license_no: Optional[str] = None
+class KYCScrenning(SQLModel, table=True):  
+    __tablename__ = "kyc_screening" 
+    id:Optional[int] = Field(default=None, primary_key=True) 
+    customer_id: Optional[str] = Field(default=None, foreign_key="customer.id") 
+    status: str
+    score: float
+    findings: str
+    screened_at: datetime = Field(default_factory=now_utc)
+
+class KYCDocumentType(SQLModel, table=True):
+    __tablename__ = "kyc_document_type"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    scope: str
+    applies_to: str
+    kind: str
+    params: str = "{}"
+    severity: str
+    description: Optional[str] = None
+    active: bool = True
+
+class KYCRule(SQLModel, table=True):
+    __tablename__ = "kyc_rule"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    scope: str                        
+    applies_to: str                  
+    kind: str
+    params: str = "{}"               
+    severity: str                    
+    description: Optional[str] = None
+    active: bool = True
+
+class KYCSetting(SQLModel, table=True):
+    __tablename__ = "kyc_setting"
+    key: str = Field(primary_key=True)
+    value: str
+    description: Optional[str] = None
 
 # Screening Tables ------->
 class MatchStatus(str, Enum):

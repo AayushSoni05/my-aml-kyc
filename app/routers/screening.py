@@ -80,6 +80,8 @@ def _recompute_customer_status(customer_id: str, session: Session):
         text = "Reject / block onboarding"
     elif status == CustomerStatus.Possible_Match:
         text = "Hold for manual review by a compliance analyst"
+    # elif (customer.kyc_status or "Not Started") != "Complete":
+    #     text = f"Hold - KYC {(customer.kyc_status or 'not started').lower()}, resolve before approving"
     else:
         text = "Approve - no adverse findings"
     if reasons:
@@ -89,6 +91,33 @@ def _recompute_customer_status(customer_id: str, session: Session):
     customer.recommendation = text
     session.add(customer)
     session.commit()
+
+    # @router.post("/kyc/{customer_id}", response_model=Read_KYCScreening)
+    # def scan_kyc(customer_id: str, check_registry: bool = True, session: Session = Depends(get_session)):
+    #     customer = session.get(Customer, customer_id)
+    #     if not customer:
+    #         raise HTTPException(status_code=404, detail="Customer not found")
+    #     skip = set() if check_registry else {"registry_gleif"}
+    #     status, score, findings = run_kyc_scan(session, customer, skip)
+    #     row = KYCScreening(customer_id=customer_id, status=status, score=score, findings=json.dumps(findings))
+    #     customer.kyc_status = status
+    #     session.add(row)
+    #     session.add(customer)
+    #     session.commit()
+    #     session.refresh(row)
+    #     _recompute_customer_status(customer_id, session)
+    #     return Read_KYCScreening(id=row.id, customer_id=customer_id, status=status, score=score,
+    #                             findings=findings, screened_at=row.screened_at)
+
+
+    # @router.get("/kyc/{customer_id}/latest", response_model=Read_KYCScreening)
+    # def latest_kyc(customer_id: str, session: Session = Depends(get_session)):
+    #     row = session.exec(select(KYCScreening).where(KYCScreening.customer_id == customer_id)
+    #                     .order_by(KYCScreening.id.desc())).first()
+    #     if not row:
+    #         raise HTTPException(status_code=404, detail="No KYC scan yet")
+    #     return Read_KYCScreening(id=row.id, customer_id=row.customer_id, status=row.status, score=row.score,
+    #                             findings=json.loads(row.findings), screened_at=row.screened_at)
 
 
 # --- Sanctions ---
