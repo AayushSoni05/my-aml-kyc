@@ -132,14 +132,10 @@ class KYCScrenning(SQLModel, table=True):
 
 class KYCDocumentType(SQLModel, table=True):
     __tablename__ = "kyc_document_type"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    scope: str
-    applies_to: str
-    kind: str
-    params: str = "{}"
-    severity: str
-    description: Optional[str] = None
-    active: bool = True
+    code: str = Field(primary_key=True)
+    label: str
+    extract_fields: str
+    active : bool = True
 
 class KYCRule(SQLModel, table=True):
     __tablename__ = "kyc_rule"

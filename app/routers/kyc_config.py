@@ -5,7 +5,8 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 from app.database import get_session
 from app.models import KYCDocumentType, KYCRule, KYCSetting, KYCDocument, CustomerType
-
+from app.idp.verify import CHECKS
+from app.idp.extractor import RESERVED_FIELDS
 # TEMPORARY until steps 5 and 6: replace these three lines with the real imports
 #   from app.idp.verify import CHECKS
 #   from app.idp.kyc_scan import SCAN_CHECKS
