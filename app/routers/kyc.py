@@ -2,7 +2,8 @@ import json
 import logging
 import uuid
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Dict
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlmodel import Session, select
 from app.config import settings
@@ -125,6 +126,36 @@ def process_document(doc_id: str, session: Session = Depends(get_session)):
         log.exception("Document extraction failed")
         raise HTTPException(status_code=502, detail="Document extraction failed")
 
+    return _verify_and_save(record, extracted, customer, session, source="ai")
+
+class ManualExtraction(BaseModel):
+    fields: Dict[str, Optional[str]]
+    notes: Optional[str] = None
+
+
+@router.post("/documents/{doc_id}/extract-manually", response_model=Read_KYCDocument)
+def extract_manually(doc_id: str, data: ManualExtraction, session: Session = Depends(get_session)):
+    """A person reads the uploaded document and types in the fields. The same verification rules then run."""
+    record = session.get(KYCDocument, doc_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if not record.file_path or not Path(record.file_path).exists():
+        raise HTTPException(status_code=400, detail="Upload a file for this document first")
+    doc_type = session.get(KYCDocumentType, record.document_type)
+    if not doc_type or not doc_type.active:
+        raise HTTPException(status_code=400, detail=f"Unknown or inactive document type '{record.document_type}'")
+    allowed = {f["name"] for f in json.loads(doc_type.extract_fields)}
+    unknown = sorted(set(data.fields) - allowed)
+    if unknown:
+        raise HTTPException(status_code=400, detail=f"Fields not defined for '{record.document_type}': {unknown}. "
+                                                    f"Allowed: {sorted(allowed)}")
+    customer = session.get(Customer, record.customer_id)
+    extracted = {**data.fields, "document_type_detected": record.document_type, "confidence": 1.0,
+                 "notes": data.notes}
+    return _verify_and_save(record, extracted, customer, session, source="manual")
+
+
+def _verify_and_save(record, extracted, customer, session, source):
     details, kyc_profile = load_kyc_context(session, customer)
     rules = load_rules(session, "document", [record.document_type, "*"])
     status, checks = verify_document(record, extracted, customer, details, kyc_profile,
@@ -138,7 +169,8 @@ def process_document(doc_id: str, session: Session = Depends(get_session)):
 
     record.extracted_data = json.dumps(extracted)
     record.extraction_confidence = extracted.get("confidence")
-    record.verification_checks = json.dumps({"model": settings.extraction_model,
+    record.verification_checks = json.dumps({"source": source,
+                                             "model": settings.extraction_model if source == "ai" else None,
                                              "processed_at": now_utc().isoformat(), "checks": checks})
     record.verification_status = VerificationStatus(status)
     record.verified_at = now_utc() if status == "verified" else None
