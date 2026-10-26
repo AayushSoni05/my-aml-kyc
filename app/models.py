@@ -121,7 +121,7 @@ class KYCCompany(SQLModel, table=True):
     source_of_funds: Optional[str] = None
     ultimate_beneficial_owner_identified: bool = False
     regulatory_license_no: Optional[str] = None
-class KYCScrenning(SQLModel, table=True):  
+class KYCScreening(SQLModel, table=True):  
     __tablename__ = "kyc_screening" 
     id:Optional[int] = Field(default=None, primary_key=True) 
     customer_id: Optional[str] = Field(default=None, foreign_key="customer.id") 
@@ -134,7 +134,7 @@ class KYCDocumentType(SQLModel, table=True):
     __tablename__ = "kyc_document_type"
     code: str = Field(primary_key=True)
     label: str
-    extract_fields: str
+    extract_fields: str = "[]"
     active : bool = True
 
 class KYCRule(SQLModel, table=True):

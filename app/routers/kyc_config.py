@@ -7,11 +7,12 @@ from app.database import get_session
 from app.models import KYCDocumentType, KYCRule, KYCSetting, KYCDocument, CustomerType
 from app.idp.verify import CHECKS
 from app.idp.extractor import RESERVED_FIELDS
+from app.idp.kyc_scan import SCAN_CHECKS
 # TEMPORARY until steps 5 and 6: replace these three lines with the real imports
 #   from app.idp.verify import CHECKS
 #   from app.idp.kyc_scan import SCAN_CHECKS
 #   from app.idp.extractor import RESERVED_FIELDS
-CHECKS, SCAN_CHECKS = {}, {}
+CHECKS =  {}
 RESERVED_FIELDS = {"document_type_detected", "confidence", "notes"}
 
 router = APIRouter(prefix="/api/v1/kyc-config", tags=["KYC Config"])
